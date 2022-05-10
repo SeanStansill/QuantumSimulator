@@ -1,6 +1,7 @@
 #### To Do
 # Add Toffoli gate
 # Create JIRA/Trello workflow
+# Add option to simulate or to calculate the state (important in noisy circuits)
 
 from functools import reduce
 import numpy as np
