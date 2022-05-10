@@ -94,13 +94,13 @@ class QuantumRegister:
         # The number of amplitudes needed is 2^n, where N is the 
         # number of qubits, So start with a vector of zeros.
         self.amplitudes = np.zeros(2**numQubits)
-        # Set the probabilit of getting 0 when measured to 1
+        # Set the probability of getting 0 when measured to 1
         self.amplitudes[0] = 1
 
-        self.value = False
+        self.measured = False
 
     def applyGate(self, gate, qubit1, qubit2=-1):
-        if self.value:
+        if self.measured:
             raise ValueError('Cannot Apply Gate to Measured Register')
         else:
             # Generate the gate matrix
@@ -110,8 +110,8 @@ class QuantumRegister:
             self.amplitudes = np.dot(self.amplitudes, gateMatrix)
 
     def measure(self):
-        if self.value:
-            return self.value
+        if self.measured:
+            return self.measured
         else:
             # Get this list of probabilities, by squaring the absolute
             # value of the amplitudes
@@ -124,10 +124,23 @@ class QuantumRegister:
             # output states (done with the range function)
 
             results = list(range(len(self.probabilities)))
-            self.value = np.binary_repr(
+            self.measured = np.binary_repr(
                 np.random.choice(results, p=self.probabilities),
                 self.numQubits
             )
-            return self.value
+            return self.measured
 
-# And thats it!
+
+class ClassicalRegister:
+
+    def __init__(self, numbits):
+        self.numbits = numbits
+
+        # Want classical bits which can only be 0 or 1
+        # boolean array is a sensible way to impose this
+        self.parity = np.zeros(2**numbits, dtype=np.bool)
+
+        # Unlike the quantum register, we want all states
+        # initialised as zero
+
+        self.measured = False
