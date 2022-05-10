@@ -138,9 +138,11 @@ class ClassicalRegister:
 
         # Want classical bits which can only be 0 or 1
         # boolean array is a sensible way to impose this
-        self.parity = np.zeros(2**numbits, dtype=np.bool)
+        # Now only have an N dimensional array, not 2^N
 
         # Unlike the quantum register, we want all states
         # initialised as zero
+        self.true = np.zeros(numbits, dtype=np.bool)
 
-        self.measured = False
+        # Classical register only used as an if statement.
+        # Do not need any classical logic
