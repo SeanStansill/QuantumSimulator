@@ -1,3 +1,7 @@
+#### To Do
+# Add Toffoli gate
+# Create JIRA/Trello workflow
+
 from functools import reduce
 import numpy as np
 
@@ -78,9 +82,12 @@ class gates:
             return np.mat([[newGate[i, j] if not np.isnan(newGate[i, j]) else 1 if i == j else 0 for j in range(n)] for i in range(n)])
 
         else:
-            # Put these here for handyness
+            # Put these here for handiness
             identity = gates.singleQubitGates['Id']
             mainGate = gates.singleQubitGates[gate]
+
+            # This line of code is not trivial. Loops through all qubits in
+            # the register. If
             gateOrder = (mainGate if i == qubit1 else identity
                          for i in range(1, numQubits + 1))
             return reduce(np.kron, gateOrder)
@@ -91,17 +98,36 @@ class QuantumRegister:
     def __init__(self, numQubits):
         self.numQubits = numQubits
 
-        # The number of amplitudes needed is 2^n, where N is the 
+        # The number of amplitudes needed is 2^N, where N is the
         # number of qubits, So start with a vector of zeros.
         self.amplitudes = np.zeros(2**numQubits)
-        # Set the probability of getting 0 when measured to 1
+
+        # Initialise the state |psi> = |1> in the first qubit
         self.amplitudes[0] = 1
 
+        # Measurement of quantum states is irreversible
+        # need a test for whether the qunit has been destroyed
         self.measured = False
+
 
     def applyGate(self, gate, qubit1, qubit2=-1):
         if self.measured:
             raise ValueError('Cannot Apply Gate to Measured Register')
+
+        elif not self.measured:
+            # This means none of the qubits have been measured
+
+            # Generate the gate matrix
+            gateMatrix = gates.generateGate(
+                gate, self.numQubits, qubit1, qubit2)
+            # Calculate the new state vector by multiplying by the gate
+            self.amplitudes = np.dot(self.amplitudes, gateMatrix)
+
+
+        elif (self.measured[qubit1-1] or self.measured[qubit2-1]):
+            raise ValueError('Cannot Apply Gate to Measured Qubit')
+
+
         else:
             # Generate the gate matrix
             gateMatrix = gates.generateGate(
@@ -109,9 +135,45 @@ class QuantumRegister:
             # Calculate the new state vector by multiplying by the gate
             self.amplitudes = np.dot(self.amplitudes, gateMatrix)
 
-    def measure(self):
-        if self.measured:
-            return self.measured
+    def measure(self, qubit=None):
+        # If no qubit is given, function measures all qubits
+        # else it only measures a single qubit
+
+        self.probabilities = np.zeros(self.numQubits)
+
+        # change measured attribute into an array of bools
+        # which has the same dimensions as the register
+        # Initialised as False
+        self.measured = np.zeros(self.numQubits, dtype=np.bool)
+
+        def bitwise_measure(qubit):
+            # numpy arrays counter from zero. For human readability
+            # we count qubits from 1
+            self.measured[qubit-1] = True
+            # Get this list of probabilities, by squaring the absolute
+            # value of the amplitudes
+            self.probabilities = []
+            for amp in np.nditer(self.amplitudes):
+                probability = np.absolute(amp)**2
+                self.probabilities.append(probability)
+
+            # Now, we need to make a weighted random choice of all of the possible
+            # output states (done with the range function)
+
+            results = list(range(len(self.probabilities)))
+            self.value = np.binary_repr(
+                np.random.choice(results, p=self.probabilities),
+                self.numQubits
+            )
+            return self.value
+
+
+        if qubit==None:
+            for i in range(self.numQubits):
+                bitwise_measure(i)
+
+        if self.measured.all():
+            return self.measure
         else:
             # Get this list of probabilities, by squaring the absolute
             # value of the amplitudes
@@ -124,11 +186,11 @@ class QuantumRegister:
             # output states (done with the range function)
 
             results = list(range(len(self.probabilities)))
-            self.measured = np.binary_repr(
+            self.value = np.binary_repr(
                 np.random.choice(results, p=self.probabilities),
                 self.numQubits
             )
-            return self.measured
+            return self.value
 
 
 class ClassicalRegister:
