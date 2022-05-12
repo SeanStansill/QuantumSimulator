@@ -110,6 +110,9 @@ class QuantumRegister:
         # need a test for whether the qunit has been destroyed
         self.measured = False
 
+        self.amplitudes = self.amplitudes.reshape((2,)*numQubits)
+
+        print(np.shape(self.amplitudes))
 
     def applyGate(self, gate, qubit1, qubit2=-1):
         if self.measured:
