@@ -170,11 +170,11 @@ class QuantumRegister:
 
             # This is the probability the qubit is in state |0>
             p = np.dot(amp.flatten(), amp.transpose().conjugate().flatten())
-
+            
             # Now, we need to make a weighted random choice of all of the possible
             # output states (done with the range function)
 
-            self.value[qubit-1] = np.random.choice([0, 1], size=1, p=[p, 1-p])
+            self.value[qubit] = np.random.choice([0, 1], size=1, p=[p, 1-p])
 
 
         if qubit==None:
