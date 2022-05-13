@@ -172,12 +172,12 @@ class QuantumRegister:
             # This is the probability the qubit is in state |0>
             p = np.dot(amp.flatten(), amp.conjugate.transpose.flatten())
 
-            print(probability)
+            print(p)
 
             # Now, we need to make a weighted random choice of all of the possible
             # output states (done with the range function)
 
-            self.value[qubit-1] = numpy.random.choice([0, 1], size=1, p=[p, 1-p])
+            self.value[qubit-1] = np.random.choice([0, 1], size=1, p=[p, 1-p])
 
 
         if qubit==None:
@@ -188,6 +188,10 @@ class QuantumRegister:
 
         if self.measured.all():
             return self.value
+
+        elif self.measure[qubit-1]:
+            raise ValueError('Qubit has already been measured')
+
         else:
             bitwise_measure(self, qubit)
             return self.value[qubit-1]
