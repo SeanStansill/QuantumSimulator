@@ -102,7 +102,7 @@ class QuantumRegister:
 
         # The number of amplitudes needed is 2^N, where N is the
         # number of qubits, So start with a vector of zeros.
-        self.amplitudes = np.zeros(2**numQubits)
+        self.amplitudes = np.zeros(2**numQubits, dtype=complex)
 
         # Initialise the state where all qubits in |0>
         self.amplitudes.flatten()
@@ -151,6 +151,7 @@ class QuantumRegister:
 
     def measure(self, qubit=None, cbit=None):
         # If no qubit is given, function measures all qubits
+        # sequentially (counting from the first)
         # else it only measures a single qubit
 
         self.probabilities = np.zeros(self.numQubits)
@@ -169,12 +170,15 @@ class QuantumRegister:
             amp = np.take(self.amplitudes, 0, axis=(qubit))
 
             # This is the probability the qubit is in state |0>
-            p = np.dot(amp.flatten(), amp.transpose().conjugate().flatten())
-            
+            probability = np.tensordot(amp, amp.conjugate(), axes=2)
+
+            # Assert that the imaginary part of the probability is almost
+            # zero
+            np.testing.assert_almost_equal(probability.imag, 0.0, decimal=3)
+
             # Now, we need to make a weighted random choice of all of the possible
             # output states (done with the range function)
-
-            self.value[qubit] = np.random.choice([0, 1], size=1, p=[p, 1-p])
+            self.value[qubit] = np.random.choice([0, 1], size=1, p=[probability.real, 1.0-probability.real])
 
 
         if qubit==None:
@@ -190,7 +194,7 @@ class QuantumRegister:
             raise ValueError('Qubit has already been measured')
 
         else:
-            bitwise_measure(self, qubit)
+            bitwise_measure(self, qubit-1)
             return self.value[qubit-1]
 
 
