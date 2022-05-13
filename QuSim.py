@@ -104,7 +104,7 @@ class QuantumRegister:
         # number of qubits, So start with a vector of zeros.
         self.amplitudes = np.zeros(2**numQubits)
 
-        # Initialise the state |q0> = |1> in the first qubit
+        # Initialise the state where all qubits in |0>
         self.amplitudes.flatten()
         self.amplitudes[0] = 1
 
@@ -164,15 +164,12 @@ class QuantumRegister:
             # numpy arrays counter from zero. For human readability
             # we count qubits from 1
             # change measured attribute for this qubit to True
-            self.measured[qubit-1] = True
+            self.measured[qubit] = True
 
-            # np.take factorises the state by 'taking' wrt axis qubit
-            amp = np.take(self.amplitudes, 0, axis=(qubit-1))
+            amp = np.take(self.amplitudes, 0, axis=(qubit))
 
             # This is the probability the qubit is in state |0>
-            p = np.dot(amp.flatten(), amp.conjugate.transpose.flatten())
-
-            print(p)
+            p = np.dot(amp.flatten(), amp.transpose().conjugate().flatten())
 
             # Now, we need to make a weighted random choice of all of the possible
             # output states (done with the range function)
