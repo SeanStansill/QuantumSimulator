@@ -109,6 +109,7 @@ class QuantumRegister:
         self.amplitudes = np.zeros(2**numQubits, dtype=complex)
 
         # Initialise the state where all qubits in |0>
+        self.amplitudes.flatten()
         self.amplitudes[0] = 1
 
         # Reshape the amplitudes so it is human readable and such that
@@ -119,7 +120,7 @@ class QuantumRegister:
 
         # Measurement of quantum states is irreversible
         # need a test for whether the qunit has been destroyed
-        self.measured = np.zeros(self.numQubitsm dtype=bool)
+        self.measured = False
 
         # create another attribute for when measuring a qubit
         # empty initially, as qubits are measured we populate it
@@ -127,7 +128,7 @@ class QuantumRegister:
         # Instead do an assert that the qubit's element is empty
         self.value = np.empty((numQubits))
 
-    def _get_amplitudes(self, qubit=None):
+    def get_amplitudes(self, qubit=None):
         if qubit == None:
             return self.amplitudes
 
@@ -154,7 +155,7 @@ class QuantumRegister:
 
         return tuple(idx)
 
-    def _get_qubit_amplitude(self, qubit):
+    def get_qubit_amplitude(self, qubit):
         qubit_state_zero = self._get_slice(qubit, 0)
         qubit_state_one = self._get_slice(qubit, 1)
 
@@ -162,28 +163,29 @@ class QuantumRegister:
 
 
     def _collapse_state(self, qubit):
+        # Get the qubit amplitudes
+        qubit_amp = self.get_qubit_amplitude(qubit)
 
         # Change the qubit amplitudes based on the value of the measured qubit
         if self.value[qubit]:
-            print('one')
             # For qubit |psi_i> = a|0> + b|1>
             # Qubit has been measured to be in state |1>, set a = 0
             self.amplitudes[self._get_slice(qubit, 0)] = np.zeros(np.shape(self.amplitudes[self._get_slice(qubit, 0)]), dtype=complex)
 
             # b needs to be normalised s.t. |b|=1
             # b is complicated as it has all other qubit states factored
-            normalisation_factor = np.tensordot(self.amplitudes[self._get_slice(qubit, 1)], self.amplitudes[self._get_slice(qubit, 1)].conjugate(), axes=2)**0.5
+            normalisation_factor = np.sum(self.amplitudes[self._get_slice(qubit, 1)] * self.amplitudes[self._get_slice(qubit, 1)].conj().T)**0.5
             self.amplitudes[self._get_slice(qubit, 1)] *= 1/normalisation_factor
 
         elif not self.value[qubit]:
-            print('zero')
             # For qubit |psi_i> = a|0> + b|1>
             # Qubit has been measured to be in state |0>, set b = 0
             self.amplitudes[self._get_slice(qubit, 1)] = np.zeros(np.shape(self.amplitudes[self._get_slice(qubit, 1)]), dtype=complex)
 
             # a needs to be normalised s.t. |a|=1
             # a is complicated as it has all other qubit states factored
-            normalisation_factor = np.tensordot(self.amplitudes[self._get_slice(qubit, 0)], self.amplitudes[self._get_slice(qubit, 0)].conjugate(), axes=2)**0.5
+
+            normalisation_factor = np.sum(self.amplitudes[self._get_slice(qubit, 0)] * self.amplitudes[self._get_slice(qubit, 0)].conj().T)**0.5
             self.amplitudes[self._get_slice(qubit, 0)] *= 1/normalisation_factor
 
 
@@ -213,42 +215,37 @@ class QuantumRegister:
             self.amplitudes = np.dot(self.amplitudes, gateMatrix)
 
     def measure(self, qubit=None, cbit=None):
-        # First if a qubit is given, move from human readable
-        # to machine indexing (ie count from 0 instead of 1)
-        # we only need to do this once
-        if qubit != None:
-            qubit -= 1
-
         # If no qubit is given, function measures all qubits
         # sequentially (counting from the first)
         # else it only measures a single qubit
 
         self.probabilities = np.zeros(self.numQubits)
 
+        # change measured attribute into an array of bools
+        # which has the same dimensions as the register
+        # Initialised as False
+        self.measured = np.zeros(self.numQubits, dtype=bool)
+
         def bitwise_measure(self, qubit):
+            # numpy arrays counter from zero. For human readability
+            # we count qubits from 1
+            # change measured attribute for this qubit to True
+            self.measured[qubit] = True
 
-            if self.measured[qubit]:
-                pass
+            amp = self.amplitudes[self._get_slice(qubit)]
+            #np.take(self.amplitudes, 0, axis=(qubit))
 
-            else:
-                # numpy arrays counter from zero. For human readability
-                # we count qubits from 1
-                # change measured attribute for this qubit to True
-                self.measured[qubit] = True
+            # This is the probability the qubit is in state |0>
+            #probability = np.dot(amp.flatten(), amp.transpose().conjugate().flatten())
+            #probability = np.tensordot(amp, amp.conjugate(), axes=2)
+            # is this the best implementation?
+            probability = np.sum(amp*amp.conj().T)
 
-                amp = self.amplitudes[self._get_slice(qubit)]
-                #np.take(self.amplitudes, 0, axis=(qubit))
+            # Now, we need to make a weighted random choice of all of the possible
+            # output states (done with the range function)
+            self.value[qubit] = np.random.choice([0, 1], size=1, p=[probability.real, 1.0-probability.real])
 
-                # This is the probability the qubit is in state |0>
-                probability = np.tensordot(amp, amp.conjugate(), axes=2)
-                #probability = np.tensordot(amp, amp.conjugate(), axes=2)
-
-                # Now, we need to make a weighted random choice of all of the possible
-                # output states (done with the range function)
-                self.value[qubit] = np.random.choice([0, 1], size=1, p=[probability.real, 1.0-probability.real])
-
-                self._collapse_state(qubit)
-
+            self._collapse_state(qubit)
 
         if qubit==None:
             for i in range(self.numQubits):
@@ -256,14 +253,15 @@ class QuantumRegister:
 
             return self.value
 
-        elif self.measured[qubit]:
-            return self.value[qubit]
-            #Choose to return the measured value instead of raising an exception
-            #raise ValueError('Qubit has already been measured')
+        if self.measured.all():
+            return self.value
+
+        elif self.measured[qubit-1]:
+            raise ValueError('Qubit has already been measured')
 
         else:
-            bitwise_measure(self, qubit)
-            return self.value[qubit]
+            bitwise_measure(self, qubit-1)
+            return self.value[qubit-1]
 
 
 class ClassicalRegister:
