@@ -1,14 +1,17 @@
 #### To Do
 # Add Toffoli gate
 # Create JIRA/Trello workflow
-# Add option to simulate or to calculate the state (important in noisy circuits)
+# Add option to simulate the circuit or to calculate the density matrix (important in noisy circuits)
 # Add Cython implementation
+# Add unit testing
 
 from functools import reduce
 import numpy as np
 
 class gates:
-    i = np.complex(0, 1)
+    # We are safe to define the complex number as a variable
+    # because of the scope of the class
+    i = complex(0, 1)
 
     singleQubitGates = {
         # Pauli-X / Not Gate
@@ -43,6 +46,7 @@ class gates:
             [0, i]
         ]).conjugate().transpose(),
         # T & T Dagger / Pi over 8 Gate
+        # np.e is much faster than np.exp when we know the argument is a float not an array
         'T': np.array([
             [1, 0],
             [0, np.e**(i * np.pi / 4.)]
@@ -124,6 +128,48 @@ class QuantumRegister:
         # Instead do an assert that the qubit's element is empty
         self.value = np.empty((numQubits))
 
+    def _get_slice(self, qubit):
+        idx = [slice(None)] * self.numQubits
+
+        idx[qubit] = not int(self.value[qubit])
+
+        return tuple(idx)
+
+    def _get_all_other_slices(self, qubit):
+        idx = [slice(None)] * self.numQubits
+
+        for i in range(self.numQubits):
+            if i == qubit:
+                continue
+
+            else:
+                idx[i] = not int(self.value[i])
+
+        return tuple(idx)
+
+    def _collapse_state(self, qubit):
+        qubit_state = self._get_slice(qubit)
+        ###############################################################################
+        ########################## WRONG ##############################################
+        ### Currently only collapses to zero. doesn't normalise
+        self.amplitudes[qubit_state] = np.zeros(np.shape(self.amplitudes[qubit_state]))
+
+
+        for i in range(len(self.numQubits)):
+            if i == qubit:
+                continue
+            else:
+                qubit_state = self._get_slice(i)
+
+                # Can I just change this to self.amplitudes and do the same a few lines below
+                # which fixes everything?
+                amp = self.amplitudes[qubit_state]
+
+                # Normalisation factor equivalent to sqrt(<psi|psi>)
+                ################ STILL WRONG. DIVIDING THE WRONG THING BY THE WRONG NUMBER
+                normalisation_factor = (np.dot(amp.flatten(), amp.transpose().conjugate().flatten()))**0.5
+                self.amplitudes[qubit_state] = amp / normalisation_factor
+
     def applyGate(self, gate, qubit1, qubit2=-1):
         if self.measured:
             raise ValueError('Cannot Apply Gate to Measured Register')
@@ -167,10 +213,12 @@ class QuantumRegister:
             # change measured attribute for this qubit to True
             self.measured[qubit] = True
 
-            amp = np.take(self.amplitudes, 0, axis=(qubit))
+            amp = self.amplitudes[self._get_slice(qubit)]
+            #np.take(self.amplitudes, 0, axis=(qubit))
 
             # This is the probability the qubit is in state |0>
-            probability = np.tensordot(amp, amp.conjugate(), axes=2)
+            probability = np.dot(amp.flatten(), amp.transpose().conjugate().flatten())
+            #probability = np.tensordot(amp, amp.conjugate(), axes=2)
 
             # Assert that the imaginary part of the probability is almost
             # zero
@@ -179,7 +227,13 @@ class QuantumRegister:
             # Now, we need to make a weighted random choice of all of the possible
             # output states (done with the range function)
             self.value[qubit] = np.random.choice([0, 1], size=1, p=[probability.real, 1.0-probability.real])
+            print('Initial state')
+            print(self.amplitudes)
 
+            self._collapse_state(qubit)
+
+            print('Final state')
+            print(self.amplitudes)
 
         if qubit==None:
             for i in range(self.numQubits):
@@ -190,7 +244,7 @@ class QuantumRegister:
         if self.measured.all():
             return self.value
 
-        elif self.measure[qubit-1]:
+        elif self.measured[qubit-1]:
             raise ValueError('Qubit has already been measured')
 
         else:

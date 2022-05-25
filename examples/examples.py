@@ -1,4 +1,4 @@
-from QuSim import QuantumRegister
+from QuSim.QuSim import QuantumRegister
 
 #############################################
 #                 Introduction              #

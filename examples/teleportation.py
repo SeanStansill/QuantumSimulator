@@ -1,4 +1,4 @@
-import QuSim as qs
+from QuSim import QuSim as qs
 
 register = qs.QuantumRegister(3)
 
