@@ -128,6 +128,14 @@ class QuantumRegister:
         # Instead do an assert that the qubit's element is empty
         self.value = np.empty((numQubits))
 
+    def get_amplitudes(self, qubit=None):
+        if qubit == None:
+            return self.amplitudes
+
+        else:
+            return self.amplitudes[self._get_slice(qubit)]
+
+
     def _get_slice(self, qubit):
         idx = [slice(None)] * self.numQubits
 
