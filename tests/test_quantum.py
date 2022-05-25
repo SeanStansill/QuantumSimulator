@@ -62,3 +62,20 @@ def test_three_qubit_entanglement():
 
         # We expect both particles to be |0> or both |1>
         assert (q1.value.all() == 1.0 or q1.value.all() == 0.0)
+
+
+def test_single_qubit_measurement():
+
+    for i in range(100):
+        qr = QuSim.QuantumRegister(2)
+
+        qr.applyGate('H', 1)
+        qr.applyGate('CNOT', 1, 2)
+
+        q1 = qr.measure(1)
+        print(qr.amplitudes[qr._get_slice(0,1)])
+        if q1:
+            assert np.array_equal(qr.amplitudes[qr._get_slice(0,0)], [0.0+0.0j, 0.0+0.0j]) and np.array_equal(qr.amplitudes[qr._get_slice(0,1)], [0.0+0.0j, 1.0+0.0j])
+
+        if not q1:
+            assert np.array_equal(qr.amplitudes[qr._get_slice(1,0)], [1.0+0.0j, 0.0+0.0j]) and np.array_equal(qr.amplitudes[qr._get_slice(0,1)], [0.0+0.0j, 0.0+0.0j])

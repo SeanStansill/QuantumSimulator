@@ -120,7 +120,7 @@ class QuantumRegister:
 
         # Measurement of quantum states is irreversible
         # need a test for whether the qunit has been destroyed
-        self.measured = False
+        self.measured = np.zeros(self.numQubits, dtype=bool)
 
         # create another attribute for when measuring a qubit
         # empty initially, as qubits are measured we populate it
@@ -128,7 +128,7 @@ class QuantumRegister:
         # Instead do an assert that the qubit's element is empty
         self.value = np.empty((numQubits))
 
-    def get_amplitudes(self, qubit=None):
+    def _get_amplitudes(self, qubit=None):
         if qubit == None:
             return self.amplitudes
 
@@ -155,7 +155,7 @@ class QuantumRegister:
 
         return tuple(idx)
 
-    def get_qubit_amplitude(self, qubit):
+    def _get_qubit_amplitude(self, qubit):
         qubit_state_zero = self._get_slice(qubit, 0)
         qubit_state_one = self._get_slice(qubit, 1)
 
@@ -163,8 +163,6 @@ class QuantumRegister:
 
 
     def _collapse_state(self, qubit):
-        # Get the qubit amplitudes
-        qubit_amp = self.get_qubit_amplitude(qubit)
 
         # Change the qubit amplitudes based on the value of the measured qubit
         if self.value[qubit]:
@@ -172,9 +170,10 @@ class QuantumRegister:
             # Qubit has been measured to be in state |1>, set a = 0
             self.amplitudes[self._get_slice(qubit, 0)] = np.zeros(np.shape(self.amplitudes[self._get_slice(qubit, 0)]), dtype=complex)
 
+            amp = self.amplitudes[self._get_slice(qubit, 1)]
             # b needs to be normalised s.t. |b|=1
             # b is complicated as it has all other qubit states factored
-            normalisation_factor = np.sum(self.amplitudes[self._get_slice(qubit, 1)] * self.amplitudes[self._get_slice(qubit, 1)].conj().T)**0.5
+            normalisation_factor = np.sum(amp * amp.conj().T)**0.5
             self.amplitudes[self._get_slice(qubit, 1)] *= 1/normalisation_factor
 
         elif not self.value[qubit]:
@@ -185,15 +184,16 @@ class QuantumRegister:
             # a needs to be normalised s.t. |a|=1
             # a is complicated as it has all other qubit states factored
 
-            normalisation_factor = np.sum(self.amplitudes[self._get_slice(qubit, 0)] * self.amplitudes[self._get_slice(qubit, 0)].conj().T)**0.5
+            amp = self.amplitudes[self._get_slice(qubit, 0)]
+            normalisation_factor = np.sum(amp * amp.conj().T)**0.5
             self.amplitudes[self._get_slice(qubit, 0)] *= 1/normalisation_factor
 
 
     def applyGate(self, gate, qubit1, qubit2=-1):
-        if self.measured:
-            raise ValueError('Cannot Apply Gate to Measured Register')
+        if (self.measured[qubit1-1] or self.measured[qubit2-1]):
+            raise ValueError('Cannot Apply Gate to Measured Qubits')
 
-        elif not self.measured:
+        else:
             # This means none of the qubits have been measured
 
             # Generate the gate matrix
@@ -203,28 +203,17 @@ class QuantumRegister:
             self.amplitudes = np.dot(self.amplitudes.flatten(), gateMatrix).reshape((2,)*self.numQubits)
 
 
-        elif (self.measured[qubit1-1] or self.measured[qubit2-1]):
-            raise ValueError('Cannot Apply Gate to Measured Qubit')
-
-
-        else:
-            # Generate the gate matrix
-            gateMatrix = gates.generateGate(
-                gate, self.numQubits, qubit1, qubit2)
-            # Calculate the new state vector by multiplying by the gate
-            self.amplitudes = np.dot(self.amplitudes, gateMatrix)
-
     def measure(self, qubit=None, cbit=None):
         # If no qubit is given, function measures all qubits
         # sequentially (counting from the first)
         # else it only measures a single qubit
 
         self.probabilities = np.zeros(self.numQubits)
-
-        # change measured attribute into an array of bools
-        # which has the same dimensions as the register
-        # Initialised as False
-        self.measured = np.zeros(self.numQubits, dtype=bool)
+        # First if a qubit is given, move from human readable
+        # to machine indexing (ie count from 0 instead of 1)
+        # we only need to do this once
+        if qubit != None:
+            qubit-= 1
 
         def bitwise_measure(self, qubit):
             # numpy arrays counter from zero. For human readability
@@ -236,9 +225,6 @@ class QuantumRegister:
             #np.take(self.amplitudes, 0, axis=(qubit))
 
             # This is the probability the qubit is in state |0>
-            #probability = np.dot(amp.flatten(), amp.transpose().conjugate().flatten())
-            #probability = np.tensordot(amp, amp.conjugate(), axes=2)
-            # is this the best implementation?
             probability = np.sum(amp*amp.conj().T)
 
             # Now, we need to make a weighted random choice of all of the possible
@@ -253,15 +239,13 @@ class QuantumRegister:
 
             return self.value
 
-        if self.measured.all():
-            return self.value
-
-        elif self.measured[qubit-1]:
-            raise ValueError('Qubit has already been measured')
+        elif self.measured[qubit]:
+            # Choose to re-return the measured value instead of raising an exception
+            return self.value[qubit]
 
         else:
-            bitwise_measure(self, qubit-1)
-            return self.value[qubit-1]
+            bitwise_measure(self, qubit)
+            return self.value[qubit]
 
 
 class ClassicalRegister:
