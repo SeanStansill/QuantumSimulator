@@ -12,7 +12,7 @@ def test_qubit_register():
     # We want to test that this is a simple numpy array
     # Do not need to check here the contents of the array
     # Simply check that it exists and is the correct shape
-    assert np.shape(q1.get_amplitudes()) == np.shape(np.zeros((2, 2)))
+    assert np.shape(q1._get_amplitudes()) == np.shape(np.zeros((2, 2)))
 
 
 
