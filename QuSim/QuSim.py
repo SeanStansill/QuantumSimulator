@@ -172,7 +172,7 @@ class QuantumRegister:
 
             # b needs to be normalised s.t. |b|=1
             # b is complicated as it has all other qubit states factored
-            normalisation_factor = np.dot(self.amplitudes[self._get_slice(qubit, 1)].flatten(), self.amplitudes[self._get_slice(qubit, 1)].transpose().conjugate().flatten())**0.5
+            normalisation_factor = np.tensordot(self.amplitudes[self._get_slice(qubit, 1)], self.amplitudes[self._get_slice(qubit, 1)].conjugate(), axes=2)**0.5
             self.amplitudes[self._get_slice(qubit, 1)] *= 1/normalisation_factor
 
         elif not self.value[qubit]:
@@ -183,7 +183,7 @@ class QuantumRegister:
 
             # a needs to be normalised s.t. |a|=1
             # a is complicated as it has all other qubit states factored
-            normalisation_factor = np.dot(self.amplitudes[self._get_slice(qubit, 0)].flatten(), self.amplitudes[self._get_slice(qubit, 0)].transpose().conjugate().flatten())**0.5
+            normalisation_factor = np.tensordot(self.amplitudes[self._get_slice(qubit, 0)], self.amplitudes[self._get_slice(qubit, 0)].conjugate(), axes=2)**0.5
             self.amplitudes[self._get_slice(qubit, 0)] *= 1/normalisation_factor
 
 
@@ -240,7 +240,7 @@ class QuantumRegister:
                 #np.take(self.amplitudes, 0, axis=(qubit))
 
                 # This is the probability the qubit is in state |0>
-                probability = np.dot(amp.flatten(), amp.transpose().conjugate().flatten())
+                probability = np.tensordot(amp, amp.conjugate(), axes=2)
                 #probability = np.tensordot(amp, amp.conjugate(), axes=2)
 
                 # Now, we need to make a weighted random choice of all of the possible
