@@ -25,20 +25,40 @@ def test_qubit_register():
 
 def test_entanglement():
 
-    # apply this test 100 times
+    # apply this test 100 times to ensure all outcomes appear at least once
+    # and that there is no small probability of error (this is a noiseless system)
     for i in range(100):
 
         q1 = QuSim.QuantumRegister(2)
 
+        # Create a Bell state
         q1.applyGate('H', 1)
-
         q1.applyGate('CNOT', 1, 2)
+
+        # Measure the system
         q1.measure()
 
-        assert (q1.value == np.array([1.0, 1.0]) or q1.value == np.array([0.0, 0.0]))
+        # We expect both particles to be |0> or both |1>
+        assert (q1.value.all() == 1.0 or q1.value.all() == 0.0)
 
 
 
 
-def two_qubit_collapse():
-    pass
+def test_three_qubit_entanglement():
+
+    # apply this test 100 times to ensure all outcomes appear at least once
+    # and that there is no small probability of error (this is a noiseless system)
+    for i in range(100):
+
+        q1 = QuSim.QuantumRegister(3)
+
+        # Create a Bell state
+        q1.applyGate('H', 1)
+        q1.applyGate('CNOT', 1, 2)
+        q1.applyGate('CNOT', 2, 3)
+
+        # Measure the system
+        q1.measure()
+
+        # We expect both particles to be |0> or both |1>
+        assert (q1.value.all() == 1.0 or q1.value.all() == 0.0)

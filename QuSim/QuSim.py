@@ -136,10 +136,10 @@ class QuantumRegister:
             return self.amplitudes[self._get_slice(qubit)]
 
 
-    def _get_slice(self, qubit):
+    def _get_slice(self, qubit, state=0):
         idx = [slice(None)] * self.numQubits
 
-        idx[qubit] = not int(self.value[qubit])
+        idx[qubit] = state
 
         return tuple(idx)
 
@@ -155,28 +155,40 @@ class QuantumRegister:
 
         return tuple(idx)
 
+    def get_qubit_amplitude(self, qubit):
+        qubit_state_zero = self._get_slice(qubit, 0)
+        qubit_state_one = self._get_slice(qubit, 1)
+
+        return [self.amplitudes[qubit_state_zero], self.amplitudes[qubit_state_one]]
+
+
     def _collapse_state(self, qubit):
-        qubit_state = self._get_slice(qubit)
-        ###############################################################################
-        ########################## WRONG ##############################################
-        ### Currently only collapses to zero. doesn't normalise
-        self.amplitudes[qubit_state] = np.zeros(np.shape(self.amplitudes[qubit_state]))
+        # Get the qubit amplitudes
+        qubit_amp = self.get_qubit_amplitude(qubit)
 
+        # Change the qubit amplitudes based on the value of the measured qubit
+        if self.value[qubit]:
+            print('one')
+            # For qubit |psi_i> = a|0> + b|1>
+            # Qubit has been measured to be in state |1>, set a = 0
+            self.amplitudes[self._get_slice(qubit, 0)] = np.zeros(np.shape(self.amplitudes[self._get_slice(qubit, 0)]), dtype=complex)
 
-        for i in range(len(self.numQubits)):
-            if i == qubit:
-                continue
-            else:
-                qubit_state = self._get_slice(i)
+            # b needs to be normalised s.t. |b|=1
+            # b is complicated as it has all other qubit states factored
+            normalisation_factor = np.dot(self.amplitudes[self._get_slice(qubit, 1)].flatten(), self.amplitudes[self._get_slice(qubit, 1)].transpose().conjugate().flatten())**0.5
+            self.amplitudes[self._get_slice(qubit, 1)] *= 1/normalisation_factor
 
-                # Can I just change this to self.amplitudes and do the same a few lines below
-                # which fixes everything?
-                amp = self.amplitudes[qubit_state]
+        elif not self.value[qubit]:
+            print('zero')
+            # For qubit |psi_i> = a|0> + b|1>
+            # Qubit has been measured to be in state |0>, set b = 0
+            self.amplitudes[self._get_slice(qubit, 1)] = np.zeros(np.shape(self.amplitudes[self._get_slice(qubit, 1)]), dtype=complex)
 
-                # Normalisation factor equivalent to sqrt(<psi|psi>)
-                ################ STILL WRONG. DIVIDING THE WRONG THING BY THE WRONG NUMBER
-                normalisation_factor = (np.dot(amp.flatten(), amp.transpose().conjugate().flatten()))**0.5
-                self.amplitudes[qubit_state] = amp / normalisation_factor
+            # a needs to be normalised s.t. |a|=1
+            # a is complicated as it has all other qubit states factored
+            normalisation_factor = np.dot(self.amplitudes[self._get_slice(qubit, 0)].flatten(), self.amplitudes[self._get_slice(qubit, 0)].transpose().conjugate().flatten())**0.5
+            self.amplitudes[self._get_slice(qubit, 0)] *= 1/normalisation_factor
+
 
     def applyGate(self, gate, qubit1, qubit2=-1):
         if self.measured:
@@ -213,7 +225,7 @@ class QuantumRegister:
         # change measured attribute into an array of bools
         # which has the same dimensions as the register
         # Initialised as False
-        self.measured = np.zeros(self.numQubits, dtype=np.bool)
+        self.measured = np.zeros(self.numQubits, dtype=bool)
 
         def bitwise_measure(self, qubit):
             # numpy arrays counter from zero. For human readability
@@ -228,20 +240,11 @@ class QuantumRegister:
             probability = np.dot(amp.flatten(), amp.transpose().conjugate().flatten())
             #probability = np.tensordot(amp, amp.conjugate(), axes=2)
 
-            # Assert that the imaginary part of the probability is almost
-            # zero
-            np.testing.assert_almost_equal(probability.imag, 0.0, decimal=3)
-
             # Now, we need to make a weighted random choice of all of the possible
             # output states (done with the range function)
             self.value[qubit] = np.random.choice([0, 1], size=1, p=[probability.real, 1.0-probability.real])
-            print('Initial state')
-            print(self.amplitudes)
 
             self._collapse_state(qubit)
-
-            print('Final state')
-            print(self.amplitudes)
 
         if qubit==None:
             for i in range(self.numQubits):
@@ -271,7 +274,7 @@ class ClassicalRegister:
 
         # Unlike the quantum register, we want all states
         # initialised as zero
-        self.true = np.zeros(numbits, dtype=np.bool)
+        self.true = np.zeros(numbits, dtype=bool)
 
         # Classical register only used as an if statement.
         # Do not need any classical logic
