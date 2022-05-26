@@ -73,7 +73,7 @@ def test_single_qubit_measurement():
         qr.applyGate('CNOT', 1, 2)
 
         q1 = qr.measure(1)
-        print(qr.amplitudes[qr._get_slice(0,1)])
+        
         if q1:
             assert np.array_equal(qr.amplitudes[qr._get_slice(0,0)], [0.0+0.0j, 0.0+0.0j]) and np.array_equal(qr.amplitudes[qr._get_slice(0,1)], [0.0+0.0j, 1.0+0.0j])
 
