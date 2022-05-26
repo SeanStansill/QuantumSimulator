@@ -128,12 +128,13 @@ class QuantumRegister:
         # Instead do an assert that the qubit's element is empty
         self.value = np.empty((numQubits))
 
-    def _get_amplitudes(self, qubit=None):
+    # Most useful as an external function
+    def get_amplitudes(self, qubit=None, state=0):
         if qubit == None:
             return self.amplitudes
 
         else:
-            return self.amplitudes[self._get_slice(qubit)]
+            return self.amplitudes[self._get_slice(qubit, state)]
 
 
     def _get_slice(self, qubit, state=0):
@@ -221,8 +222,7 @@ class QuantumRegister:
             # change measured attribute for this qubit to True
             self.measured[qubit] = True
 
-            amp = self.amplitudes[self._get_slice(qubit)]
-            #np.take(self.amplitudes, 0, axis=(qubit))
+            amp = self.get_amplitudes(qubit)
 
             # This is the probability the qubit is in state |0>
             probability = np.sum(amp*amp.conj().T)
