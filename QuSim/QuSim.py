@@ -160,7 +160,7 @@ class QuantumRegister:
         qubit_state_zero = self._get_slice(qubit, 0)
         qubit_state_one = self._get_slice(qubit, 1)
 
-        return [self.amplitudes[qubit_state_zero], self.amplitudes[qubit_state_one]]
+        return [self.get_amplitudes(qubit, 0), self.get_amplitudes(qubit, 1)]
 
 
     def _collapse_state(self, qubit):
@@ -171,7 +171,7 @@ class QuantumRegister:
             # Qubit has been measured to be in state |1>, set a = 0
             self.amplitudes[self._get_slice(qubit, 0)] = np.zeros(np.shape(self.amplitudes[self._get_slice(qubit, 0)]), dtype=complex)
 
-            amp = self.amplitudes[self._get_slice(qubit, 1)]
+            amp = self.amplitudes.get_amplitudes(qubit, 1)
             # b needs to be normalised s.t. |b|=1
             # b is complicated as it has all other qubit states factored
             normalisation_factor = np.sum(amp * amp.conj().T)**0.5
@@ -185,7 +185,7 @@ class QuantumRegister:
             # a needs to be normalised s.t. |a|=1
             # a is complicated as it has all other qubit states factored
 
-            amp = self.amplitudes[self._get_slice(qubit, 0)]
+            amp = self.get_amplitudes(qubit, 0)
             normalisation_factor = np.sum(amp * amp.conj().T)**0.5
             self.amplitudes[self._get_slice(qubit, 0)] *= 1/normalisation_factor
 
