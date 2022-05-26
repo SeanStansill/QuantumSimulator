@@ -12,7 +12,7 @@ def test_qubit_register():
     # We want to test that this is a simple numpy array
     # Do not need to check here the contents of the array
     # Simply check that it exists and is the correct shape
-    assert np.shape(q1._get_amplitudes()) == np.shape(np.zeros((2, 2)))
+    assert np.shape(q1.get_amplitudes()) == np.shape(np.zeros((2, 2)))
 
 
 
@@ -108,9 +108,13 @@ def test_single_qubit_measurement2():
         # If state of first qubit given by |psi_1> = a|0> + b|1>,
         # b contains information about all other bits (so is an array)
         # this is given as
-        q1_amp_one = qr.amplitudes[qr._get_slice(0, 1)]
+        q1_amp_one = qr.get_amplitudes(0, 1)
 
         # Calculate probability state is in |1> by calculating
         # b \cdot b^{\dagger}
 
-        np.testing.assert_approx_equal(np.sum(q1_amp_one * q1_amp_one.conj().T), 1.0, significant=3)
+        p = np.sum(q1_amp_one * q1_amp_one.conj().T)
+
+        # Assert the probability is approximately 1.0
+        # Noise floor for float64 is around 1e-16. Choose 10x larger for safety
+        np.testing.assert_approx_equal(p, 1.0, significant=15)
