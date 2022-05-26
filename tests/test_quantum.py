@@ -65,7 +65,7 @@ def test_three_qubit_entanglement():
 
 
 def test_single_qubit_measurement():
-
+    # applies the test 100 times to check that a partial measurement returns the correct probability amplitudes
     for i in range(100):
         qr = QuSim.QuantumRegister(2)
 
@@ -79,3 +79,38 @@ def test_single_qubit_measurement():
 
         if not q1:
             assert np.array_equal(qr.amplitudes[qr._get_slice(1,0)], [1.0+0.0j, 0.0+0.0j]) and np.array_equal(qr.amplitudes[qr._get_slice(0,1)], [0.0+0.0j, 0.0+0.0j])
+
+def test_single_qubit_measurement2():
+    # Apply Deutsch's algorithm to a randomly generated 2-qubit state
+    for i in range(100):
+        qr = QuSim.QuantumRegister(2)
+
+        # Initialize in either |01> or |10>
+        # Pick a random number which is either 1 or 2
+        # denoting the first or second qubit which is chosen as
+        # state |1> (this is equivalent to the choice of "which
+        # hand is the coin in")
+        qubit = np.random.choice([1, 2], size=1, p=[0.5, 0.5])
+
+        # Apply the X gate to the random qubit chosen
+        qr.applyGate('X', qubit)
+
+        # Apply Deutsch's algorithm
+        qr.applyGate('H', 1)
+        qr.applyGate('H', 2)
+
+        qr.applyGate('CNOT', 1, 2)
+
+        qr.applyGate('H', 1)
+        qr.applyGate('H', 2)
+
+        # Now the first qubit should be in state |1>
+        # If state of first qubit given by |psi_1> = a|0> + b|1>,
+        # b contains information about all other bits (so is an array)
+        # this is given as
+        q1_amp_one = qr.amplitudes[qr._get_slice(0, 1)]
+
+        # Calculate probability state is in |1> by calculating
+        # b \cdot b^{\dagger}
+
+        np.testing.assert_approx_equal(np.sum(q1_amp_one * q1_amp_one.conj().T), 1.0, significant=3)
