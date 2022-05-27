@@ -73,14 +73,41 @@ def test_single_qubit_measurement():
         qr.applyGate('CNOT', 1, 2)
 
         q1 = qr.measure(1)
-        
+
         if q1:
             assert np.array_equal(qr.amplitudes[qr._get_slice(0,0)], [0.0+0.0j, 0.0+0.0j]) and np.array_equal(qr.amplitudes[qr._get_slice(0,1)], [0.0+0.0j, 1.0+0.0j])
 
         if not q1:
             assert np.array_equal(qr.amplitudes[qr._get_slice(1,0)], [1.0+0.0j, 0.0+0.0j]) and np.array_equal(qr.amplitudes[qr._get_slice(0,1)], [0.0+0.0j, 0.0+0.0j])
 
+
 def test_single_qubit_measurement2():
+
+    # applies the test 100 times to check that a partial measurement normalises our wavefunction correctly
+    # (in this case we don't case about the exact result, only that the probabilities returned are less than one)
+    for i in range(100):
+        qr = QuSim.QuantumRegister(3)
+
+
+
+        # Apply some random gates
+        qr.applyGate('H', 1)
+        qr.applyGate('CNOT', 1, 2)
+        qr.applyGate('CNOT', 1, 3)
+
+        qr.applyGate('Y', 1)
+        qr.applyGate('X', 2)
+        qr.applyGate('T', 3)
+        qr.applyGate('T', 3)
+        qr.applyGate('TDagger', 1)
+
+        # check that normalisation works 100 times
+        # normalisation incredibly important
+        qr.measure()
+
+
+
+def test_single_qubit_measurement3():
     # Apply Deutsch's algorithm to a randomly generated 2-qubit state
     for i in range(100):
         qr = QuSim.QuantumRegister(2)
@@ -113,7 +140,7 @@ def test_single_qubit_measurement2():
         # Calculate probability state is in |1> by calculating
         # b \cdot b^{\dagger}
 
-        p = np.sum(q1_amp_one * q1_amp_one.conj().T)
+        p = np.sum(q1_amp_one @ q1_amp_one.conj().T)
 
         # Assert the probability is approximately 1.0
         # Noise floor for float64 is around 1e-16. Choose 10x larger for safety
