@@ -145,3 +145,54 @@ def test_single_qubit_measurement3():
         # Assert the probability is approximately 1.0
         # Noise floor for float64 is around 1e-16. Choose 10x larger for safety
         np.testing.assert_approx_equal(p, 1.0, significant=15)
+
+
+def test_conditional_gate_application():
+    # In quantum computing we often use a measurement outcome of a qubit to decide whether to apply a
+    # gate to another qubit (see quantum teleportation protocol https://qiskit.org/textbook/ch-algorithms/teleportation.html)
+
+    # Test 100 times because probabilistic
+    for i in range(100):
+        qr = QuSim.QuantumRegister(3)
+
+        # State currently in |000>
+        # we want state |psi>|00>
+        # do this by getting two numbers whose magnitudes sum to 1
+
+        import random
+        a = random.random()
+        b = np.sqrt(1 - a**2)
+
+        # now set the state to |psi>|00> which is given as
+        qr.amplitudes[qr._get_slice(0, 0)] = np.array([[a, 0.0], [0.0, 0.0]])
+        qr.amplitudes[qr._get_slice(0, 0)] = np.array([[b, 0.0], [0.0, 0.0]])
+
+        # teleportation algorithm
+        qr.applyGate('H', 2)
+
+        qr.applyGate('CNOT', 2, 3)
+
+        qr.applyGate('CNOT', 1, 2)
+
+        qr.applyGate('H', 1)
+
+        # measure the first and second qubits
+        result1 = qr.measure(1)
+        result2 = qr.measure(2)
+
+        # if the second qubit is in state |1>, apply an X gate to qubit 3
+        qr.applyGate('X', 3, control=result2)
+
+        # if the first bit is in state |1>, apply a Z gate to qubit 3
+        qr.applyGate('Z', 3, control=result1)
+
+        # teleportation should have happened. Qubit 3 should have same state as
+        # qubit 1 at the beginning of the simulation
+
+
+        # check that the amplitude of qubit 3 being in state |0> is the same as
+        # our initial qubit 1 amplitude
+        np.testing.assert_almost_equal(qr.amplitudes[qr._get_slice(2, 0)][0], a)
+
+        # also check that the amplitude of qubit 3 being in state |1> b
+        np.testing.assert_almost_equal(qr.amplitudes[qr._get_slice(2, 1)][0], b)
