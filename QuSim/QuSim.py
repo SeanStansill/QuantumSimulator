@@ -224,7 +224,7 @@ class QuantumRegister:
             if (self.measured[qubit1-1] or self.measured[qubit2-1]):
                 raise ValueError('Cannot Apply Gate to Measured Qubits')
 
-            else:
+            elif bool(control)==True:
                 # This means none of the qubits have been measured
 
                 # Generate the gate matrix

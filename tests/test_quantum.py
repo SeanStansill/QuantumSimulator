@@ -165,7 +165,7 @@ def test_conditional_gate_application():
 
         # now set the state to |psi>|00> which is given as
         qr.amplitudes[qr._get_slice(0, 0)] = np.array([[a, 0.0], [0.0, 0.0]])
-        qr.amplitudes[qr._get_slice(0, 0)] = np.array([[b, 0.0], [0.0, 0.0]])
+        qr.amplitudes[qr._get_slice(0, 1)] = np.array([[b, 0.0], [0.0, 0.0]])
 
         # teleportation algorithm
         qr.applyGate('H', 2)
@@ -177,14 +177,17 @@ def test_conditional_gate_application():
         qr.applyGate('H', 1)
 
         # measure the first and second qubits
-        result1 = qr.measure(1)
-        result2 = qr.measure(2)
+        result1 = qr.measure(2)
+        result2 = qr.measure(1)
+
+        print(result1)
+        print(result2)
 
         # if the second qubit is in state |1>, apply an X gate to qubit 3
-        qr.applyGate('X', 3, control=result2)
+        qr.applyGate('X', 3, control=result1)
 
         # if the first bit is in state |1>, apply a Z gate to qubit 3
-        qr.applyGate('Z', 3, control=result1)
+        qr.applyGate('Z', 3, control=result2)
 
         # teleportation should have happened. Qubit 3 should have same state as
         # qubit 1 at the beginning of the simulation
@@ -192,7 +195,15 @@ def test_conditional_gate_application():
 
         # check that the amplitude of qubit 3 being in state |0> is the same as
         # our initial qubit 1 amplitude
-        np.testing.assert_almost_equal(qr.amplitudes[qr._get_slice(2, 0)][0], a)
+        print(a)
+        print()
+        print(b)
+        print()
+        print(qr.amplitudes[qr._get_slice(2, 0)])
+        print()
+        print(qr.amplitudes[qr._get_slice(2, 1)])
+
+        np.testing.assert_almost_equal(np.abs(qr.amplitudes[qr._get_slice(2, 0)][0]), a)
 
         # also check that the amplitude of qubit 3 being in state |1> b
         np.testing.assert_almost_equal(qr.amplitudes[qr._get_slice(2, 1)][0], b)
