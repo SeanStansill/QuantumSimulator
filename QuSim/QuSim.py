@@ -204,18 +204,34 @@ class QuantumRegister:
 
 
 
-    def applyGate(self, gate, qubit1, qubit2=-1):
-        if (self.measured[qubit1-1] or self.measured[qubit2-1]):
-            raise ValueError('Cannot Apply Gate to Measured Qubits')
+    def applyGate(self, gate, qubit1, qubit2=None, control=True):
+
+        # if only one qubit has been given, we only need to check one qubit
+        if qubit2==None:
+
+            # check qubit hasn't been measured
+            if self.measured[qubit1-1]:
+                raise ValueError('Cannot Apply Gate to Measured Qubits')
+
+            else:
+                # Generate the gate matrix
+                gateMatrix = gates.generateGate(
+                    gate, self.numQubits, qubit1)
+                # Calculate the new state vector by multiplying by the gate
+                self.amplitudes = np.dot(self.amplitudes.flatten(), gateMatrix).reshape((2,) * self.numQubits)
 
         else:
-            # This means none of the qubits have been measured
+            if (self.measured[qubit1-1] or self.measured[qubit2-1]):
+                raise ValueError('Cannot Apply Gate to Measured Qubits')
 
-            # Generate the gate matrix
-            gateMatrix = gates.generateGate(
-                gate, self.numQubits, qubit1, qubit2)
-            # Calculate the new state vector by multiplying by the gate
-            self.amplitudes = np.dot(self.amplitudes.flatten(), gateMatrix).reshape((2,)*self.numQubits)
+            else:
+                # This means none of the qubits have been measured
+
+                # Generate the gate matrix
+                gateMatrix = gates.generateGate(
+                    gate, self.numQubits, qubit1, qubit2)
+                # Calculate the new state vector by multiplying by the gate
+                self.amplitudes = np.dot(self.amplitudes.flatten(), gateMatrix).reshape((2,)*self.numQubits)
 
 
     def measure(self, qubit=None, cbit=None):
